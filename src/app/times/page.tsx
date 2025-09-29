@@ -101,7 +101,7 @@ export default function TimesPage() {
                 <Users className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {teams.reduce((sum, team) => sum + (team.members_count || 0), 0)}
+                {teams.reduce((sum, team) => sum + Number(team.members_count || 0), 0)}
               </h3>
               <p className="text-gray-600">Membros Totais</p>
             </div>
@@ -110,7 +110,7 @@ export default function TimesPage() {
                 <Package className="h-8 w-8 text-purple-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {teams.reduce((sum, team) => sum + (team.items_count || 0), 0)}
+                {teams.reduce((sum, team) => sum + Number(team.items_count || 0), 0)}
               </h3>
               <p className="text-gray-600">Itens Cadastrados</p>
             </div>
@@ -119,7 +119,7 @@ export default function TimesPage() {
                 <MapPin className="h-8 w-8 text-orange-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {teams.reduce((sum, team) => sum + (team.locations_count || 0), 0)}
+                {teams.reduce((sum, team) => sum + Number(team.locations_count || 0), 0)}
               </h3>
               <p className="text-gray-600">Localizações</p>
             </div>
@@ -213,7 +213,7 @@ export default function TimesPage() {
                           </div>
                           <div className="bg-green-50 px-3 py-2 rounded-lg text-center">
                             <div className="text-lg font-bold text-green-600">
-                              {((team.members_count || 0) + (team.items_count || 0) + (team.locations_count || 0))}
+                              {(Number(team.members_count || 0) + Number(team.items_count || 0) + Number(team.locations_count || 0))}
                             </div>
                             <div className="text-xs text-green-500">Total</div>
                           </div>
