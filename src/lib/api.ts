@@ -100,17 +100,65 @@ export async function getUsers(limit = 50): Promise<User[]> {
 export async function getTeams(limit = 50): Promise<(Team & { user_name: string; members_count: number; items_count: number; locations_count: number })[]> {
   const client = await db.connect();
   try {
-    const result = await client.query(`
+    // First, check if team_memberships table exists
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'team_memberships'
+      );
+    `);
+    
+    const hasTeamMemberships = tableCheck.rows[0].exists;
+    
+    let query = `
       SELECT t.*, 
              u.email as user_name,
+    `;
+    
+    if (hasTeamMemberships) {
+      query += `
+             COALESCE(tm.members_count, 0) as members_count,
+      `;
+    } else {
+      query += `
              0 as members_count,
-             0 as items_count,
-             0 as locations_count
+      `;
+    }
+    
+    query += `
+             COALESCE(ti.items_count, 0) as items_count,
+             COALESCE(tl.locations_count, 0) as locations_count
       FROM teams t
       LEFT JOIN users u ON t.user_id = u.id
+    `;
+    
+    if (hasTeamMemberships) {
+      query += `
+      LEFT JOIN (
+        SELECT team_id, COUNT(*) as members_count
+        FROM team_memberships
+        GROUP BY team_id
+      ) tm ON t.id = tm.team_id
+      `;
+    }
+    
+    query += `
+      LEFT JOIN (
+        SELECT team_id, COUNT(*) as items_count
+        FROM items
+        GROUP BY team_id
+      ) ti ON t.id = ti.team_id
+      LEFT JOIN (
+        SELECT team_id, COUNT(*) as locations_count
+        FROM locations
+        GROUP BY team_id
+      ) tl ON t.id = tl.team_id
       ORDER BY t.created_at DESC
       LIMIT $1
-    `, [limit]);
+    `;
+    
+    const result = await client.query(query, [limit]);
     return result.rows;
   } finally {
     client.release();
