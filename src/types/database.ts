@@ -53,6 +53,18 @@ export interface Team {
   members_count?: number;
   items_count?: number;
   locations_count?: number;
+  members?: TeamMember[];
+}
+
+export interface TeamMember {
+  id: number;
+  user_id: number;
+  team_id: number;
+  role: number;
+  created_at: string;
+  updated_at: string;
+  user_email?: string;
+  user_name?: string;
 }
 
 export interface User {
@@ -62,6 +74,15 @@ export interface User {
   updated_at: string;
   teams_count?: number;
   memberships_count?: number;
+  teams?: UserTeam[];
+}
+
+export interface UserTeam {
+  id: number;
+  name: string;
+  role: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DashboardStats {

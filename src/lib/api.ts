@@ -1,5 +1,5 @@
 import db from './db';
-import { Item, Location, StockTransaction, DashboardStats, User, Team } from '@/types/database';
+import { Item, Location, StockTransaction, DashboardStats, User, Team, TeamMember, UserTeam } from '@/types/database';
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const client = await db.connect();
@@ -85,13 +85,71 @@ export async function getLowStockItems(): Promise<Item[]> {
 export async function getUsers(limit = 50): Promise<User[]> {
   const client = await db.connect();
   try {
-    const result = await client.query(`
-      SELECT u.*, 0 as teams_count, 0 as memberships_count
+    // First, check if team_memberships table exists
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'team_memberships'
+      );
+    `);
+    
+    const hasTeamMemberships = tableCheck.rows[0].exists;
+    
+    let query = `
+      SELECT u.*, 
+             COALESCE(created_teams.teams_count, 0) as teams_count,
+             COALESCE(memberships.memberships_count, 0) as memberships_count
       FROM users u
+    `;
+    
+    if (hasTeamMemberships) {
+      query += `
+      LEFT JOIN (
+        SELECT user_id, COUNT(*) as memberships_count
+        FROM team_memberships
+        GROUP BY user_id
+      ) memberships ON u.id = memberships.user_id
+      `;
+    } else {
+      query += `
+      LEFT JOIN (
+        SELECT 0 as memberships_count
+      ) memberships ON true
+      `;
+    }
+    
+    query += `
+      LEFT JOIN (
+        SELECT user_id, COUNT(*) as teams_count
+        FROM teams
+        GROUP BY user_id
+      ) created_teams ON u.id = created_teams.user_id
       ORDER BY u.created_at DESC
       LIMIT $1
-    `, [limit]);
-    return result.rows;
+    `;
+    
+    const result = await client.query(query, [limit]);
+    
+    // Get team memberships for each user
+    const users = result.rows;
+    for (const user of users) {
+      if (hasTeamMemberships) {
+        const membershipsResult = await client.query(`
+          SELECT t.id, t.name, tm.role, tm.created_at, tm.updated_at
+          FROM team_memberships tm
+          JOIN teams t ON tm.team_id = t.id
+          WHERE tm.user_id = $1
+          ORDER BY tm.created_at DESC
+        `, [user.id]);
+        
+        user.teams = membershipsResult.rows;
+      } else {
+        user.teams = [];
+      }
+    }
+    
+    return users;
   } finally {
     client.release();
   }
@@ -159,7 +217,27 @@ export async function getTeams(limit = 50): Promise<(Team & { user_name: string;
     `;
     
     const result = await client.query(query, [limit]);
-    return result.rows;
+    
+    // Get team members for each team
+    const teams = result.rows;
+    for (const team of teams) {
+      if (hasTeamMemberships) {
+        const membersResult = await client.query(`
+          SELECT tm.id, tm.user_id, tm.team_id, tm.role, tm.created_at, tm.updated_at,
+                 u.email as user_email, u.email as user_name
+          FROM team_memberships tm
+          JOIN users u ON tm.user_id = u.id
+          WHERE tm.team_id = $1
+          ORDER BY tm.created_at DESC
+        `, [team.id]);
+        
+        team.members = membersResult.rows;
+      } else {
+        team.members = [];
+      }
+    }
+    
+    return teams;
   } finally {
     client.release();
   }
