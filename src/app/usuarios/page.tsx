@@ -157,7 +157,7 @@ export default function UsuariosPage() {
                 <Users2 className="h-8 w-8 text-purple-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {teams.reduce((sum, team) => sum + (team.members_count || 0), 0)}
+                {teams.reduce((sum, team) => sum + Number(team.members_count || 0), 0)}
               </h3>
               <p className="text-gray-600">Membros Ativos</p>
             </div>
@@ -166,7 +166,7 @@ export default function UsuariosPage() {
                 <Package className="h-8 w-8 text-orange-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {teams.reduce((sum, team) => sum + (team.items_count || 0), 0)}
+                {teams.reduce((sum, team) => sum + Number(team.items_count || 0), 0)}
               </h3>
               <p className="text-gray-600">Itens nos Times</p>
             </div>
